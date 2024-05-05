@@ -1,24 +1,7 @@
-# web-programming
-Web Programming I
+# Quote App
+web app where you can create an account and keep a collection of your favorite quotes. It is built using Flask and styled with Bootstrap
 
-The examples are in topic directories in the repository. 
+this project is part of the Web Programming I class at Kent State University.
 
-- Topic-00-HTML-CSS
-    - Introductory static web page
-    - Various tags
-    - CSS styling
-    - Javascript access to DOM
-    - Simple events
-    - Bootstrap intro
-
-- Topic-01-textarea
-    - TextArea tag
-    - More on event handlers 
-    - Putting text into text area
-    - Getting text out of a text area 
-    - Storing data to localStorage
-    - Retreiving data from localStorage
-
-- Topic-02-movie-list
-    - Getting information from Ajax
+This is a fork of [This Repo](https://github.com/gregdelozier/web-programming)
     
