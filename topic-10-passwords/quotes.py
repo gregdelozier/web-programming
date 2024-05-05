@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, make_response, redirect
+from flask import Flask, flash, render_template, request, make_response, redirect
 from mongita import MongitaClientDisk
 from bson import ObjectId
 
@@ -13,6 +13,10 @@ session_db = client.session_db
 user_db = client.user_db
 
 import uuid
+import passwords
+import secrets
+
+app.secret_key = secrets.token_hex(32)
 
 @app.route("/", methods=["GET"])
 @app.route("/quotes", methods=["GET"])
@@ -52,6 +56,9 @@ def get_quotes():
 
 @app.route("/login", methods=["GET"])
 def get_login():
+    #userCollection = user_db.user_collection
+    #usersList = list(userCollection.find({}))
+    #print(usersList)
     session_id = request.cookies.get("session_id", None)
     print("Pre-login session id = ", session_id)
     if session_id:
@@ -61,24 +68,56 @@ def get_login():
 
 @app.route("/login", methods=["POST"])
 def post_login():
-    user = request.form.get("user", "")
+    username = request.form["username"]
+    password = request.form["password"]
     # open the user collection
     user_collection = user_db.user_collection
     # look for the user
-    user_data = list(user_collection.find({"user": user}))
-    if len(user_data) != 1:
+    count = user_collection.count_documents({"user": username})
+    user_data = user_collection.find_one({"user": username})
+    if count == 0:
+        flash("Incorrect username or password")
         response = redirect("/login")
         response.delete_cookie("session_id")
         return response
-    session_id = str(uuid.uuid4())
-    # open the session collection
-    session_collection = session_db.session_collection
-    # insert the user
-    session_collection.delete_one({"session_id": session_id})
-    session_data = {"session_id": session_id, "user": user}
-    session_collection.insert_one(session_data)
-    response = redirect("/quotes")
-    response.set_cookie("session_id", session_id)
+    storedPass = user_data.get("pass", "")
+    storedSalt = user_data.get("salt", "")
+    if passwords.check_password(password, storedPass, storedSalt):
+        session_id = str(uuid.uuid4())
+        # open the session collection
+        session_collection = session_db.session_collection
+        # insert the user
+        session_collection.delete_one({"session_id": session_id})
+        session_data = {"session_id": session_id, "user": username}
+        session_collection.insert_one(session_data)
+        response = redirect("/quotes")
+        response.set_cookie("session_id", session_id)
+        return response
+    else:
+        flash("Incorrect username or password")
+        response = redirect("/login")
+        response.delete_cookie("session_id")
+        return response
+
+@app.route("/register", methods=["GET"])
+def get_register():
+   return render_template("register.html") 
+
+
+@app.route("/register", methods=["POST"])
+def post_register():
+    userCollection = user_db.user_collection
+    newUsername = request.form["username"]
+    newPassword = request.form["password"]
+    userData = list(userCollection.find({"user": newUsername}))
+    if len(userData) > 0:
+        flash("Username is not unique, please try again.")
+        response = redirect("/register")
+        return response
+    hashed_password, salt = passwords.hash_password(newPassword)
+    newUserEntry = {"user": newUsername, "pass": hashed_password, "salt": salt}
+    userCollection.insert_one(newUserEntry)
+    response = redirect("/login")
     return response
 
 
